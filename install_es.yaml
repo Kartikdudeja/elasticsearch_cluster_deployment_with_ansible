@@ -1,0 +1,74 @@
+
+- name: 'Install Elastic Search and their Pre-requisites'
+  hosts: testNode
+  become: yes
+  gather_facts: true
+
+  vars:
+    REQUIRED_PACKAGES:
+    - wget
+
+    JAVA_PACKAGE: java-1.8.0-openjdk.x86_64
+
+    ES_URL: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.9.2-x86_64.rpm
+
+    ES_CONFIG_FILE: /vagrant/config/es_config_testNode.yml
+
+  tasks:
+
+  - name: 'Installing Required Packages'
+    ansible.builtin.package:
+      name: '{{ item }}'
+      state: present
+    loop: '{{ REQUIRED_PACKAGES }}'
+
+    tags:
+    - installation
+    - packages
+
+  - name: 'Installing Java'
+    ansible.builtin.package:
+      name: '{{ JAVA_PACKAGE }}'
+      state: present
+
+    tags:
+    - installation
+    - java
+
+  - name: 'Download and Install Elasticsearch'
+    ansible.builtin.package:
+      name: '{{ ES_URL }}'
+      state: present
+
+    tags:
+    - installation
+    - elasticsearch
+
+  - name: 'Placing ES configuration file'
+    ansible.builtin.copy:
+      src: '{{ ES_CONFIG_FILE }}'
+      dest: /etc/elasticsearch/elasticsearch.yml
+      owner: root
+      group: elasticsearch
+      mode: '0440'
+
+    tags:
+    - configuration
+    - elasticsearch
+
+  - name: 'Configuring ES JVM Config'
+    ansible.builtin.shell: sed -i -e 's/^\-Xms1g/\-Xms256m/g' -e 's/^\-Xmx1g/-\Xmx256m/g' /etc/elasticsearch/jvm.options
+
+    tags:
+    - configuration
+    - elasticsearch
+
+  - name: 'Start and Enable Elasticsearch Service'
+    ansible.builtin.service:
+      name: elasticsearch
+      state: started
+      enabled: true
+
+    tags:
+    - service
+    - elasticsearch
